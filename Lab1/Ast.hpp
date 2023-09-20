@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <list>
 #include <string>
 #include <string_view>
 
@@ -138,5 +139,37 @@ class AstReader
    
 
    private:
+   struct OperandNode
+   {
+      static std::size_t token;
+      std::size_t currTok;
+      NodePtr node;
+      std::size_t begInd;
+      std::size_t endInd;
+   };
+
+   std::size_t
+   GetOperatorCnt(
+      std::string_view Str,
+      char Op) const;
+
+
+   std::string
+   ProcessOperator(
+      std::string Str,
+      char Operator,
+      std::list<OperandNode>& OperandNodes);
+
+
+   std::string
+   ProcessInv(
+      std::string Str,
+      std::size_t OpCnt,
+      std::list<OperandNode>& OperandNodes);
+
+   std::string
+   ProcessBrackets(
+      std::string Str,
+      std::list<OperandNode>& OperandNodes);
 
 };
