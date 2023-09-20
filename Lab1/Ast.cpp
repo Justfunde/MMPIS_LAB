@@ -14,12 +14,13 @@
 struct BracketNode
 {
    static std::size_t token;
+   std::size_t currTok;
    NodePtr node;
    std::size_t begInd;
    std::size_t endInd;
 };
 
-std::size_t BracketNode::token = 2;
+std::size_t BracketNode::token = 10;
 
 AstArray
 AstReader::ReadFile(
@@ -117,7 +118,7 @@ AstReader::CreateNode(
    else if(OperatorPart.size() == 3)
    {
       NodePtr lhs = CreateNode(OperatorPart[0]);
-      NodePtr rhs = CreateNode(OperatorPart[3]);
+      NodePtr rhs = CreateNode(OperatorPart[2]);
       topNode = std::make_shared<BinaryOp>(OperatorPart[1], lhs, rhs);
    }
    else if('~' == OperatorPart[0] && '(' == OperatorPart[1])
@@ -147,7 +148,9 @@ AstReader::CreateNode(
                node.endInd = i;
                node.node = CreateNode(resStr.substr(node.begInd, node.endInd - node.begInd));
                std::cout << resStr.substr(node.begInd, node.endInd - node.begInd) << std::endl;
-               resStr.replace(node.begInd - 1, node.endInd + 1, std::to_string(BracketNode::token++));
+               node.currTok = BracketNode::token;
+               bracketNodes.push_back(node);
+               resStr.replace(node.begInd - 1,  (node.endInd - node.begInd) + 2, std::to_string(BracketNode::token++));
                i = 0;
                std::cout << resStr << std::endl;
                bracketsStack.pop();
@@ -156,10 +159,150 @@ AstReader::CreateNode(
          }
           ++i;
       }
+      auto getOperatorCnt = 
+         [](std::string_view Str, char Op) -> std::size_t
+         {
+            std::size_t cnt = 0;
+            for(const auto& it : Str)
+            {
+               if(it == Op) { cnt++ ;}
+            }
+            return cnt;
+         };
+      const std::size_t mulCnt = getOperatorCnt(resStr, '*');
 
-      
+      std::cout << resStr << std::endl;   
+      for(std::size_t i = 0; i < mulCnt; ++i)
+      {
+         std::string_view resStrView = resStr;
+         std::size_t mulIndex = resStrView.find_first_of('*');
+         std::size_t lhsBeginIndex = mulIndex - 1;
+         std::size_t rhsEndIndex = mulIndex + 1;
+         while(resStrView[lhsBeginIndex] != '+' && lhsBeginIndex != 0) 
+         { --lhsBeginIndex;}
+         while(resStrView[rhsEndIndex] != '+' && resStrView[rhsEndIndex] != '*' && rhsEndIndex != resStrView.size()) 
+         {++rhsEndIndex;}
+         std::string_view operationSubstr = resStrView.substr(lhsBeginIndex, rhsEndIndex - lhsBeginIndex);
+         //Парсинг левой и правых частей
+         //Получение lhs и rhs операндов
+         std::string_view lhsOperand = resStrView.substr(lhsBeginIndex + 1, mulIndex - lhsBeginIndex - 1);
+         std::string_view rhsOperand = resStrView.substr(mulIndex + 1, rhsEndIndex - mulIndex - 1);
+         //если левая часть не токен, создаем ноду
+         NodePtr lhsNode;
+         std::cout<< lhsOperand << std::endl;
+         if(lhsOperand.size() > 1)
+         {
+            std::size_t tok = std::stoull(std::string(lhsOperand.begin(), lhsOperand.end()));
+            for(std::vector<BracketNode>::iterator it = bracketNodes.begin(); it != bracketNodes.end(); ++it)
+            {
+               if(it->currTok == tok)
+               {
+                  lhsNode = it->node;
+                  bracketNodes.erase(it);
+                  break;
+               }
+            }
+         }
+         else
+         {
+            lhsNode = std::make_shared<Operand>(lhsOperand[0]);
+         }
 
+         NodePtr rhsNode;
+         std::cout<< rhsOperand << std::endl;
+         if(rhsOperand.size() > 1)
+         {
+            std::size_t tok = std::stoull(std::string(rhsOperand.begin(), rhsOperand.end()));
+            for(std::vector<BracketNode>::iterator it = bracketNodes.begin(); it != bracketNodes.end(); ++it)
+            {
+               if(it->currTok == tok)
+               {
+                  rhsNode = it->node;
+                  bracketNodes.erase(it);
+                  break;
+               }
+            }
+         }
+         else
+         {
+            rhsNode = std::make_shared<Operand>(rhsOperand[0]);
+         }
 
+         NodePtr resultNode = std::make_shared<BinaryOp>('*', lhsNode, rhsNode);
+         BracketNode newTokNode;
+         newTokNode.node = resultNode;
+         newTokNode.currTok = BracketNode::token;
+         bracketNodes.push_back(newTokNode);
+         resStr.replace(lhsBeginIndex + 1, rhsEndIndex - lhsBeginIndex + 2, std::to_string(BracketNode::token++));
+         std::cout<< resStr << std::endl;
+      }
+      const std::size_t sumCnt = getOperatorCnt(resStr, '+');
+
+      for(std::size_t i = 0; i < sumCnt; ++i)
+      {
+         std::string_view resStrView = resStr;
+         std::size_t mulIndex = resStrView.find_first_of('+');
+         std::size_t lhsBeginIndex = mulIndex - 1;
+         std::size_t rhsEndIndex = mulIndex + 1;
+         while(resStrView[lhsBeginIndex] != '+' && lhsBeginIndex != 0) 
+         { --lhsBeginIndex;}
+         while(resStrView[rhsEndIndex] != '+' && resStrView[rhsEndIndex] != '*' && rhsEndIndex != resStrView.size()) 
+         {++rhsEndIndex;}
+         std::string_view operationSubstr = resStrView.substr(lhsBeginIndex, rhsEndIndex - lhsBeginIndex);
+         //Парсинг левой и правых частей
+         //Получение lhs и rhs операндов
+         std::string_view lhsOperand = resStrView.substr(lhsBeginIndex, mulIndex - lhsBeginIndex);
+         std::string_view rhsOperand = resStrView.substr(mulIndex + 1, rhsEndIndex - mulIndex - 1);
+         //если левая часть не токен, создаем ноду
+         NodePtr lhsNode;
+         std::cout<< lhsOperand << std::endl;
+         if(lhsOperand.size() > 1)
+         {
+            std::size_t tok = std::stoull(std::string(lhsOperand.begin(), lhsOperand.end()));
+            for(std::vector<BracketNode>::iterator it = bracketNodes.begin(); it != bracketNodes.end(); ++it)
+            {
+               if(it->currTok == tok)
+               {
+                  lhsNode = it->node;
+                  bracketNodes.erase(it);
+                  break;
+               }
+            }
+         }
+         else
+         {
+            lhsNode = std::make_shared<Operand>(lhsOperand[0]);
+         }
+
+         NodePtr rhsNode;
+         std::cout<< rhsOperand << std::endl;
+         if(rhsOperand.size() > 1)
+         {
+            std::size_t tok = std::stoull(std::string(rhsOperand.begin(), rhsOperand.end()));
+            for(std::vector<BracketNode>::iterator it = bracketNodes.begin(); it != bracketNodes.end(); ++it)
+            {
+               if(it->currTok == tok)
+               {
+                  rhsNode = it->node;
+                  bracketNodes.erase(it);
+                  break;
+               }
+            }
+         }
+         else
+         {
+            rhsNode = std::make_shared<Operand>(rhsOperand[0]);
+         }
+
+         NodePtr resultNode = std::make_shared<BinaryOp>('+', lhsNode, rhsNode);
+         BracketNode newTokNode;
+         newTokNode.node = resultNode;
+         newTokNode.currTok = BracketNode::token;
+         bracketNodes.push_back(newTokNode);
+         resStr.replace(lhsBeginIndex, rhsEndIndex - lhsBeginIndex + 1, std::to_string(BracketNode::token++));
+         std::cout<< resStr << std::endl;
+      }
+      topNode = bracketNodes[0].node;
 
       //std::vector<std::pair<std::size_t, char>>;//operands and
       
