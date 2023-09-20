@@ -8,8 +8,10 @@
 #include <regex>
 #include <unordered_map>
 #include <stack>
+#include <sstream>
 
 #include "Ast.hpp"
+
 
 struct BracketNode
 {
@@ -84,6 +86,7 @@ AstReader::ParseLine(
    std::cout<< std::endl << prepared_line << std::endl;
 
    tree->head = CreateNode(prepared_line);
+   std::cout << tree->ToString() << std::endl; 
    return tree;
 }
 
@@ -216,7 +219,7 @@ AstReader::CreateNode(
       for(std::size_t i = 0; i < mulCnt; ++i)
       {
          std::string_view resStrView = resStr;
-         std::size_t mulIndex = resStrView.find_last_of('*');
+         std::size_t mulIndex = resStrView.find_first_of('*');
          std::size_t lhsBeginIndex = mulIndex - 1;
          std::size_t rhsEndIndex = mulIndex + 1;
          while(resStrView[lhsBeginIndex] != '+' && resStrView[lhsBeginIndex] != '*' && lhsBeginIndex != 0) 
@@ -278,7 +281,10 @@ AstReader::CreateNode(
          bracketNodes.push_back(newTokNode);
          resStr.replace(lhsBeginIndex, rhsEndIndex - lhsBeginIndex + 1, std::to_string(BracketNode::token++));
          std::cout<< resStr << std::endl;
+         std::flush(std::cout);
+         std::cout<< std::endl<< resultNode->ToString() << std::endl;
       }
+
       const std::size_t sumCnt = getOperatorCnt(resStr, '+');
 
       for(std::size_t i = 0; i < sumCnt; ++i)
@@ -348,4 +354,37 @@ AstReader::CreateNode(
       topNode = bracketNodes[0].node;
    }
    return topNode;
+}
+
+
+
+void
+AstWriter::WriteFile(
+   const std::string FName,
+   const AstArray& Arr)
+{
+   if(FName.empty() || Arr.empty()) { throw std::invalid_argument("Invalid args");}
+
+   std::ofstream f(FName);
+   if(f.is_open()) {throw std::runtime_error("File was not opened");}
+
+   for(const auto& it : Arr)
+   {
+      f << it->ToString();
+   }
+}
+
+std::string
+AstWriter::WriteBuf(const AstArray& Arr)
+{
+   if(Arr.empty()) {return ""; }
+
+   std::stringstream ss;
+
+   for(std::size_t i = 0; i < Arr.size(); ++i)
+   {
+      ss << Arr[i]->ToString();
+      if(Arr.size() - 1 != i) {ss << std::endl;}
+   }
+   return ss.str();
 }

@@ -24,9 +24,10 @@ if(Boost_FOUND)
      include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
 
-
-set(SHARED_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
+set(SHARED_INCLUDE_DIRS ${SHARED_INCLUDE_DIRS} ${CMAKE_CURRENT_LIST_DIR})
 
 
 function(REMOVE_TEST_FILES_FUNCTION PATH_LIST RETURN_LIST)
@@ -45,4 +46,5 @@ endfunction()
    
 
 
+set(SHARED_INCLUDE_DIRS libs/googletest)
 add_subdirectory(Lab1)

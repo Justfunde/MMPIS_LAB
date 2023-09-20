@@ -9,4 +9,6 @@ message(STATUS "HDRS = ${HDRS} ${TEST_HDRS}")
 
 add_executable(${TARGET_NAME} ${SRCS} ${TEST_SRCS}  ${HDRS} ${TEST_HDRS})
 target_compile_definitions(${TARGET_NAME} PUBLIC "TEST_FILES_DIR=\"${CMAKE_CURRENT_LIST_DIR}/TestFiles\"")
-target_include_directories(${TARGET_NAME} PRIVATE ${HEADERS_DIR})
+message(STATUS "LAB1 include dirs : ${HEADERS_DIR} ${SHARED_INCLUDE_DIRS}")
+target_include_directories(${TARGET_NAME} PRIVATE ${HEADERS_DIR} ${SHARED_INCLUDE_DIRS})
+target_link_libraries(${TARGET_NAME} PUBLIC ${GTEST_LIBRARIES} )

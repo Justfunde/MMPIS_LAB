@@ -14,7 +14,7 @@ struct Node
    ToString() const = 0;
    virtual ~Node() = default;
 
-   char t;
+   char t[2] = { 0 };
 };
 
 using NodePtr = std::shared_ptr<Node>;
@@ -26,13 +26,14 @@ struct UnaryOp : public Node
    UnaryOp(char Op, NodePtr operand)
       : operand(operand)
    {
-      this->t = Op;
+      this->t[0] = Op;
    }
    
    std::string
    ToString() const override final
    {
-      return t + operand->ToString();
+      std::string ret = t + operand->ToString();
+      return ret;
    }
 
    NodePtr operand;
@@ -46,14 +47,14 @@ struct BinaryOp : public Node
       : lhs(lhsOp)
       , rhs(rhsOp)
    {
-      this->t = Op;
+      this->t[0] = Op;
    }
 
    std::string
    ToString() const override final
    {
-      
-      return t + lhs->ToString() + rhs->ToString();
+      std::string ret = t + lhs->ToString() + rhs->ToString();
+      return ret;
    }
 
 
@@ -63,13 +64,13 @@ struct BinaryOp : public Node
 
 struct Operand : public Node
 {
-   Operand(char Operand) { this->t = Operand; }
+   Operand(char Operand) { this->t[0] = Operand; }
 
    std::string
    ToString() const override final
    {
-      
-      return std::string(&t);
+      std::string ret(t);
+      return ret;
    }
 };
 
@@ -94,6 +95,19 @@ class Ast
    NodePtr head;
 };
 
+class AstWriter
+{
+   public:
+
+   void
+   WriteFile(
+      const std::string FName,
+      const AstArray& Arr);
+
+   std::string
+   WriteBuf(const AstArray& Arr);
+};
+
 
 class AstReader
 {
@@ -103,6 +117,9 @@ class AstReader
    ReadFile(
       const std::string& FileName);
 
+   AstPtr
+   ParseLine(
+      std::string_view Line);
 
    private:
    
@@ -112,9 +129,7 @@ class AstReader
    bool
    CheckSyntax(std::string_view Str);
 
-   AstPtr
-   ParseLine(
-      std::string_view Line);
+  
 
    NodePtr
    CreateNode(
