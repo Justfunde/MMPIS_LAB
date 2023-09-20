@@ -16,7 +16,6 @@ struct Node
 
    char t[2] = { 0 };
 };
-
 using NodePtr = std::shared_ptr<Node>;
 
 
@@ -32,8 +31,7 @@ struct UnaryOp : public Node
    std::string
    ToString() const override final
    {
-      std::string ret = t + operand->ToString();
-      return ret;
+      return t + operand->ToString();
    }
 
    NodePtr operand;
@@ -53,14 +51,14 @@ struct BinaryOp : public Node
    std::string
    ToString() const override final
    {
-      std::string ret = t + lhs->ToString() + rhs->ToString();
-      return ret;
+      return t + lhs->ToString() + rhs->ToString();
    }
 
 
    NodePtr lhs;
    NodePtr rhs;
 };
+
 
 struct Operand : public Node
 {
@@ -69,8 +67,7 @@ struct Operand : public Node
    std::string
    ToString() const override final
    {
-      std::string ret(t);
-      return ret;
+      return t;
    }
 };
 
@@ -83,16 +80,18 @@ class Ast
 {
    public:
 
-
-   bool
-   IsValid() const;
-
    std::string
    ToString() const { return head->ToString(); }
 
+   NodePtr
+   GetHead() const { return head;}
 
-   public:
+   void
+   SetHead(NodePtr NewHead) { head = NewHead;}
+
+   private:
    NodePtr head;
+
 };
 
 class AstWriter
@@ -128,8 +127,6 @@ class AstReader
 
    bool
    CheckSyntax(std::string_view Str);
-
-  
 
    NodePtr
    CreateNode(

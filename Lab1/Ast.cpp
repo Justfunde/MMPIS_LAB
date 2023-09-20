@@ -56,10 +56,9 @@ bool
 AstReader::CheckSyntax(std::string_view Str)
 {
    if(Str.empty()) { return false;}
-
-   //static const std::regex regexp("R(((\w[\+\*])+\w))");
-   //return std::regex_match(Str.data(), regexp);
-   return true;
+   static const std::regex regexp("^[\\w+\\*~01() ]*$");
+   const bool matches = std::regex_match(std::string(Str.begin(), Str.end()), regexp);
+   return matches;
 }
 
 bool
@@ -77,16 +76,16 @@ AstReader::ParseLine(
    if(!CheckSyntax(Line)) { return nullptr; }
 
    AstPtr tree = std::make_shared<Ast>();
-   std::cout<< std::endl << Line << std::endl;
+   ////std::cout<< std::endl << Line << std::endl;
 
    //prepare str
    std::string prepared_line(Line.begin(), Line.end());
    prepared_line.erase(std::remove(prepared_line.begin(), prepared_line.end(), ' '), prepared_line.end());
 
-   std::cout<< std::endl << prepared_line << std::endl;
+   ////std::cout<< std::endl << prepared_line << std::endl;
 
-   tree->head = CreateNode(prepared_line);
-   std::cout << tree->ToString() << std::endl; 
+   tree->SetHead(CreateNode(prepared_line));
+   //std::cout << tree->ToString() << std::endl; 
    return tree;
 }
 
@@ -104,7 +103,7 @@ AstReader::CreateNode(
 {
    if(OperatorPart.empty()) { return nullptr; }
 
-   std::cout << OperatorPart << std::endl;
+   //std::cout << OperatorPart << std::endl;
 
    NodePtr topNode = nullptr;
 
@@ -124,14 +123,6 @@ AstReader::CreateNode(
       NodePtr rhs = CreateNode(OperatorPart[2]);
       topNode = std::make_shared<BinaryOp>(OperatorPart[1], lhs, rhs);
    }
-   // else if('~' == OperatorPart[0] && '(' == OperatorPart[1])
-   // {
-   //    const std::size_t closeBracketPos = OperatorPart.find_last_of(')');
-   //    if(closeBracketPos == std::string::npos) { return nullptr;}
-   //    if(closeBracketPos != OperatorPart.size() - 1) { return nullptr;}
-
-   //    topNode = std::make_shared<UnaryOp>(OperatorPart[0], CreateNode(OperatorPart.substr(2, OperatorPart.size() - 3)));
-   // }
    else
    {
       std::string resStr(OperatorPart.begin(), OperatorPart.end());
@@ -150,12 +141,12 @@ AstReader::CreateNode(
                node.begInd = bracketsStack.top().second + 1;
                node.endInd = i;
                node.node = CreateNode(resStr.substr(node.begInd, node.endInd - node.begInd));
-               std::cout << resStr.substr(node.begInd, node.endInd - node.begInd) << std::endl;
+               //std::cout << resStr.substr(node.begInd, node.endInd - node.begInd) << std::endl;
                node.currTok = BracketNode::token;
                bracketNodes.push_back(node);
                resStr.replace(node.begInd - 1,  (node.endInd - node.begInd) + 2, std::to_string(BracketNode::token++));
                i = 0;
-               std::cout << resStr << std::endl;
+               //std::cout << resStr << std::endl;
                bracketsStack.pop();
             }
            
@@ -215,7 +206,7 @@ AstReader::CreateNode(
       
       const std::size_t mulCnt = getOperatorCnt(resStr, '*');
 
-      std::cout << resStr << std::endl;   
+      //std::cout << resStr << std::endl;   
       for(std::size_t i = 0; i < mulCnt; ++i)
       {
          std::string_view resStrView = resStr;
@@ -235,7 +226,7 @@ AstReader::CreateNode(
          std::string_view rhsOperand = resStrView.substr(mulIndex + 1, rhsEndIndex - mulIndex);
          //если левая часть не токен, создаем ноду
          NodePtr lhsNode;
-         std::cout<< lhsOperand << std::endl;
+         //std::cout<< lhsOperand << std::endl;
          if(lhsOperand.size() > 1)
          {
             std::size_t tok = std::stoull(std::string(lhsOperand.begin(), lhsOperand.end()));
@@ -255,7 +246,7 @@ AstReader::CreateNode(
          }
 
          NodePtr rhsNode;
-         std::cout<< rhsOperand << std::endl;
+         //std::cout<< rhsOperand << std::endl;
          if(rhsOperand.size() > 1)
          {
             std::size_t tok = std::stoull(std::string(rhsOperand.begin(), rhsOperand.end()));
@@ -280,9 +271,9 @@ AstReader::CreateNode(
          newTokNode.currTok = BracketNode::token;
          bracketNodes.push_back(newTokNode);
          resStr.replace(lhsBeginIndex, rhsEndIndex - lhsBeginIndex + 1, std::to_string(BracketNode::token++));
-         std::cout<< resStr << std::endl;
-         std::flush(std::cout);
-         std::cout<< std::endl<< resultNode->ToString() << std::endl;
+         //std::cout<< resStr << std::endl;
+         //std::flush(//std::cout);
+         //std::cout<< std::endl<< resultNode->ToString() << std::endl;
       }
 
       const std::size_t sumCnt = getOperatorCnt(resStr, '+');
@@ -304,7 +295,7 @@ AstReader::CreateNode(
          std::string_view rhsOperand = resStrView.substr(mulIndex + 1, rhsEndIndex - mulIndex - 1);
          //если левая часть не токен, создаем ноду
          NodePtr lhsNode;
-         std::cout<< lhsOperand << std::endl;
+         //std::cout<< lhsOperand << std::endl;
          if(lhsOperand.size() > 1)
          {
             std::size_t tok = std::stoull(std::string(lhsOperand.begin(), lhsOperand.end()));
@@ -324,7 +315,7 @@ AstReader::CreateNode(
          }
 
          NodePtr rhsNode;
-         std::cout<< rhsOperand << std::endl;
+         //std::cout<< rhsOperand << std::endl;
          if(rhsOperand.size() > 1)
          {
             std::size_t tok = std::stoull(std::string(rhsOperand.begin(), rhsOperand.end()));
@@ -349,7 +340,7 @@ AstReader::CreateNode(
          newTokNode.currTok = BracketNode::token;
          bracketNodes.push_back(newTokNode);
          resStr.replace(lhsBeginIndex, rhsEndIndex - lhsBeginIndex + 1, std::to_string(BracketNode::token++));
-         std::cout<< resStr << std::endl;
+         //std::cout<< resStr << std::endl;
       }
       topNode = bracketNodes[0].node;
    }
@@ -383,7 +374,11 @@ AstWriter::WriteBuf(const AstArray& Arr)
 
    for(std::size_t i = 0; i < Arr.size(); ++i)
    {
-      ss << Arr[i]->ToString();
+      if(nullptr != Arr[i])
+      {
+         ss << Arr[i]->ToString();
+      }
+      else {ss << "ERROR";}
       if(Arr.size() - 1 != i) {ss << std::endl;}
    }
    return ss.str();
