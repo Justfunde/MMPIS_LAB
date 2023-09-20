@@ -121,14 +121,14 @@ AstReader::CreateNode(
       NodePtr rhs = CreateNode(OperatorPart[2]);
       topNode = std::make_shared<BinaryOp>(OperatorPart[1], lhs, rhs);
    }
-   else if('~' == OperatorPart[0] && '(' == OperatorPart[1])
-   {
-      const std::size_t closeBracketPos = OperatorPart.find_last_of(')');
-      if(closeBracketPos == std::string::npos) { return nullptr;}
-      if(closeBracketPos != OperatorPart.size() - 1) { return nullptr;}
+   // else if('~' == OperatorPart[0] && '(' == OperatorPart[1])
+   // {
+   //    const std::size_t closeBracketPos = OperatorPart.find_last_of(')');
+   //    if(closeBracketPos == std::string::npos) { return nullptr;}
+   //    if(closeBracketPos != OperatorPart.size() - 1) { return nullptr;}
 
-      topNode = std::make_shared<UnaryOp>(OperatorPart[0], CreateNode(OperatorPart.substr(2, OperatorPart.size() - 3)));
-   }
+   //    topNode = std::make_shared<UnaryOp>(OperatorPart[0], CreateNode(OperatorPart.substr(2, OperatorPart.size() - 3)));
+   // }
    else
    {
       std::string resStr(OperatorPart.begin(), OperatorPart.end());
@@ -169,24 +169,67 @@ AstReader::CreateNode(
             }
             return cnt;
          };
+
+      //Токенизация инверсных выражений(с ~)
+
+      const std::size_t notCnt = getOperatorCnt(resStr, '~');
+
+      for(std::size_t i = 0; i < notCnt; ++i)
+      {
+         std::string_view resStrView = resStr;
+         std::size_t notInd = resStr.find('~');
+         std::size_t notEndInd = notInd + 1;
+         while(resStr[notEndInd] != '+' && resStr[notEndInd] != '*' && notEndInd != resStr.size()) { notEndInd++;}
+
+         std::string_view operationStr = resStrView.substr(notInd, notEndInd - notInd);
+         BracketNode node;
+         if(operationStr.size() == 2)
+         {
+            node.currTok = BracketNode::token;
+            node.node = CreateNode(operationStr);
+         }
+         else
+         {
+            node.currTok = BracketNode::token;
+            std::string_view tokenStr = operationStr.substr(1);
+            std::size_t tok = std::stoull(std::string(tokenStr.begin(), tokenStr.end()));
+            NodePtr implNode;
+            for(std::vector<BracketNode>::iterator it = bracketNodes.begin(); it != bracketNodes.end(); ++it)
+            {
+               if(it->currTok == tok)
+               {
+                  implNode = it->node;
+                  bracketNodes.erase(it);
+                  break;
+               }
+            }
+            node.node = std::make_shared<UnaryOp>('~', implNode);
+         }
+         bracketNodes.push_back(node);
+         resStr.replace(notInd, notEndInd - notInd, std::to_string(BracketNode::token++));
+      }
+
+      
       const std::size_t mulCnt = getOperatorCnt(resStr, '*');
 
       std::cout << resStr << std::endl;   
       for(std::size_t i = 0; i < mulCnt; ++i)
       {
          std::string_view resStrView = resStr;
-         std::size_t mulIndex = resStrView.find_first_of('*');
+         std::size_t mulIndex = resStrView.find_last_of('*');
          std::size_t lhsBeginIndex = mulIndex - 1;
          std::size_t rhsEndIndex = mulIndex + 1;
-         while(resStrView[lhsBeginIndex] != '+' && lhsBeginIndex != 0) 
+         while(resStrView[lhsBeginIndex] != '+' && resStrView[lhsBeginIndex] != '*' && lhsBeginIndex != 0) 
          { --lhsBeginIndex;}
+         if(lhsBeginIndex != 0 ) {lhsBeginIndex++;}
          while(resStrView[rhsEndIndex] != '+' && resStrView[rhsEndIndex] != '*' && rhsEndIndex != resStrView.size()) 
          {++rhsEndIndex;}
+         if(rhsEndIndex != resStrView.size()) {rhsEndIndex--;}
          std::string_view operationSubstr = resStrView.substr(lhsBeginIndex, rhsEndIndex - lhsBeginIndex);
          //Парсинг левой и правых частей
          //Получение lhs и rhs операндов
-         std::string_view lhsOperand = resStrView.substr(lhsBeginIndex + 1, mulIndex - lhsBeginIndex - 1);
-         std::string_view rhsOperand = resStrView.substr(mulIndex + 1, rhsEndIndex - mulIndex - 1);
+         std::string_view lhsOperand = resStrView.substr(lhsBeginIndex, mulIndex - lhsBeginIndex );
+         std::string_view rhsOperand = resStrView.substr(mulIndex + 1, rhsEndIndex - mulIndex);
          //если левая часть не токен, создаем ноду
          NodePtr lhsNode;
          std::cout<< lhsOperand << std::endl;
@@ -233,7 +276,7 @@ AstReader::CreateNode(
          newTokNode.node = resultNode;
          newTokNode.currTok = BracketNode::token;
          bracketNodes.push_back(newTokNode);
-         resStr.replace(lhsBeginIndex + 1, rhsEndIndex - lhsBeginIndex + 2, std::to_string(BracketNode::token++));
+         resStr.replace(lhsBeginIndex, rhsEndIndex - lhsBeginIndex + 1, std::to_string(BracketNode::token++));
          std::cout<< resStr << std::endl;
       }
       const std::size_t sumCnt = getOperatorCnt(resStr, '+');
@@ -244,7 +287,7 @@ AstReader::CreateNode(
          std::size_t mulIndex = resStrView.find_first_of('+');
          std::size_t lhsBeginIndex = mulIndex - 1;
          std::size_t rhsEndIndex = mulIndex + 1;
-         while(resStrView[lhsBeginIndex] != '+' && lhsBeginIndex != 0) 
+         while(resStrView[lhsBeginIndex] != '+' && resStrView[lhsBeginIndex] != '*' && lhsBeginIndex != 0) 
          { --lhsBeginIndex;}
          while(resStrView[rhsEndIndex] != '+' && resStrView[rhsEndIndex] != '*' && rhsEndIndex != resStrView.size()) 
          {++rhsEndIndex;}
@@ -303,10 +346,6 @@ AstReader::CreateNode(
          std::cout<< resStr << std::endl;
       }
       topNode = bracketNodes[0].node;
-
-      //std::vector<std::pair<std::size_t, char>>;//operands and
-      
-
    }
    return topNode;
 }
