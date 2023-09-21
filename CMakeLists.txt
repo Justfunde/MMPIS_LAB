@@ -38,9 +38,6 @@ function(REMOVE_TEST_FILES_FUNCTION PATH_LIST RETURN_LIST)
          list(APPEND FILTERED_LIST "${CURR_PATH}")
       endif()
    endforeach()
-
-   message("FILTERED_LIST inside function: ${FILTERED_LIST}")
-
    set(${RETURN_LIST} ${FILTERED_LIST} PARENT_SCOPE)
 endfunction()
    
@@ -48,3 +45,4 @@ endfunction()
 
 set(SHARED_INCLUDE_DIRS libs/googletest)
 add_subdirectory(Lab1)
+add_subdirectory(Lab2)

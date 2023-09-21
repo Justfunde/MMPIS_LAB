@@ -1,7 +1,8 @@
-set(TARGET_NAME Lab1)
+set(TARGET_NAME Lab2)
 
 file(GLOB_RECURSE TEST_SRCS ${CMAKE_CURRENT_LIST_DIR} *.cpp *.c)
 file(GLOB_RECURSE TEST_HDRS ${CMAKE_CURRENT_LIST_DIR} *.hpp *.h)
+
 
 add_executable(${TARGET_NAME} ${SRCS} ${TEST_SRCS}  ${HDRS} ${TEST_HDRS})
 target_compile_definitions(${TARGET_NAME} PUBLIC "TEST_FILES_DIR=\"${CMAKE_CURRENT_LIST_DIR}/TestFiles\"")
