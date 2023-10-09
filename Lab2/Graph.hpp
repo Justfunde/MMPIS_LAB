@@ -23,9 +23,10 @@ class Graph
    public:
    NodePtr src; //a(0)
    NodePtr dst; //f
+   double requiredTime;
 
    std::unordered_map<std::string, NodePtr> nodeHashMap; //Hashtable of nodes and their names
-   std::unordered_map<std::string, std::list<NodePtr>> edgesMap; //HashTable of nodename and connected nodes
+   std::unordered_map<std::string, std::list<std::pair<NodePtr, double>>> edgesMap; //HashTable of nodename and connected nodes
    std::size_t modV; //Vertex cnt
    std::size_t modE; //Edges cnt
 

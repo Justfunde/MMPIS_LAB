@@ -33,8 +33,7 @@ GraphReader::ReadFile(
    f >> ret->modV >> ret->modE;
    if(0 == ret->modV || 0 == ret->modE) {throw std::runtime_error("File hasn't verticies or edges!");}
 
-   double requiredTime;
-   f >> requiredTime;
+   f >> ret->requiredTime;
 
    for(std::size_t i = 0; i < ret->modV; ++i)
    {
@@ -42,40 +41,25 @@ GraphReader::ReadFile(
       double delay;
       f >> nodeName >> delay;
       auto node = std::make_shared<Node>(nodeName, delay);
-      if(ret->modV -1 == i) { ret->dst = node;}
-      ret->nodeHashMap[nodeName] = node;      
+
+      if(ret->modV - 1 == i) { ret->dst = node;}
+      if(0 == i) { ret->src = node;}
+
+      ret->nodeHashMap[nodeName] = node;
    }
+
+   ret->dst->minTime = std::optional<double>(ret->requiredTime);
 
    for(std::size_t i = 0; i < ret->modE; ++i)
    {
       std::string lhsNodeName;
       std::string rhsNodeName;
-      f >> lhsNodeName >> rhsNodeName;
-      ret->edgesMap[lhsNodeName].push_back(ret->nodeHashMap[rhsNodeName]);
+      double edgeWeight;
+      f >> lhsNodeName >> rhsNodeName >> edgeWeight;
+      ret->edgesMap[lhsNodeName].push_back(std::make_pair(ret->nodeHashMap[rhsNodeName], edgeWeight));
    }
 
-   ret->src = std::make_shared<Node>("SRC",0);
    ret->src->maxTime = ret->src->minTime = std::optional<double>(0);
-
-   ret->nodeHashMap[ret->src->name] = ret->src;
-   for(const auto& nodeIter : ret->nodeHashMap)
-   {
-      bool isSrc = true;
-      for(const auto& edgeIter : ret->edgesMap)
-      {
-         const auto searchRes = std::find_if(edgeIter.second.begin(), edgeIter.second.end(),[&nodeIter](const auto& val) 
-         { 
-            if(nodeIter.first == "SRC") {return false;}
-            return nodeIter.first == val->name;
-         });
-         if(searchRes != edgeIter.second.end())
-         {
-            isSrc = false;
-            break;
-         }
-      }
-      if(isSrc && nodeIter.first != "SRC") {ret->edgesMap[ret->src->name].push_back(ret->nodeHashMap[nodeIter.first]);  }
-   }
    return ret;
 }
 
@@ -94,19 +78,23 @@ TimingGraphProcessor::CalcAAT()
 
       for(auto& neighbor : Gr->edgesMap[currName])
       {
-         const auto potentialMaxTime = Gr->nodeHashMap[currName]->maxTime.value() + neighbor->delay;
-         if(!neighbor->maxTime.has_value()) { neighbor->maxTime = std::optional<double>(potentialMaxTime);}
-         else if(potentialMaxTime > neighbor->maxTime)
+         const auto potentialMaxTime = Gr->nodeHashMap[currName]->maxTime.value() + neighbor.first->delay + neighbor.second;
+         if(!neighbor.first->maxTime.has_value())
          {
-            neighbor->maxTime = potentialMaxTime;
+            neighbor.first->maxTime = std::optional<double>(potentialMaxTime);
          }
-         queue.push(neighbor->name);
+         else if(potentialMaxTime > neighbor.first->maxTime)
+         {
+            neighbor.first->maxTime = potentialMaxTime;
+         }
+         queue.push(neighbor.first->name);
       }
    }
    NodeNameDoubleValMap ret;
    for(const auto& it : Gr->nodeHashMap)
    {
-      ret[it.first] = it.second->maxTime.value();
+      auto res = it.second->maxTime.value();
+      ret[it.first] = res;
    }
 
    InPrintHt(ret);
@@ -118,28 +106,42 @@ TimingGraphProcessor::CalcRAT()
 {
    std::queue<std::string> queue;
 
-   queue.push(Gr->src->name);
+   queue.push(Gr->dst->name);
 
    while(!queue.empty())
    {
       const auto currName = queue.front();
       queue.pop();
-
-      for(auto& neighbor : Gr->edgesMap[currName])
+      //find neighbors
+      std::list<std::pair<std::string, double>> connectedEdgesNames;
+      for(const auto& neighborIter : Gr->edgesMap)
       {
-         const auto potentialMinTime = Gr->nodeHashMap[currName]->minTime.value() + neighbor->delay;
-         if(!neighbor->minTime.has_value()) { neighbor->minTime = std::optional<double>(potentialMinTime);}
-         else if(potentialMinTime < neighbor->minTime)
+         auto resIter = std::find_if(neighborIter.second.begin(), neighborIter.second.end(),[&currName](const auto& val) { return val.first->name == currName;});
+         if(resIter != neighborIter.second.end())
          {
-            neighbor->minTime = potentialMinTime;
+            connectedEdgesNames.push_back(std::make_pair(neighborIter.first, resIter->second));
          }
-         queue.push(neighbor->name);
       }
+
+     for(const auto& neighborIter : connectedEdgesNames)
+      {
+         const auto potentialMinTime = Gr->nodeHashMap[currName]->minTime.value() - Gr->nodeHashMap[neighborIter.first]->delay - neighborIter.second;
+         if(!Gr->nodeHashMap[neighborIter.first]->minTime.has_value())
+         {
+            Gr->nodeHashMap[neighborIter.first]->minTime = std::optional<double>(potentialMinTime);
+         }
+         else if(potentialMinTime < Gr->nodeHashMap[neighborIter.first]->minTime)
+         {
+            Gr->nodeHashMap[neighborIter.first]->minTime = potentialMinTime;
+         }
+         queue.push(Gr->nodeHashMap[neighborIter.first]->name);
+      }
+
    }
    NodeNameDoubleValMap ret;
    for(const auto& it : Gr->nodeHashMap)
    {
-      ret[it.first] = it.second->minTime.value();
+      ret[it.first] = it.second->minTime.value() + it.second->delay;
    }
    InPrintHt(ret);
    return ret;
@@ -155,7 +157,7 @@ TimingGraphProcessor::CalcSlackes()
    NodeNameDoubleValMap ret;
    for(const auto& it : aatMap)
    {
-      ret[it.first] = it.second - ratMap.at(it.first);
+      ret[it.first] = - it.second + ratMap.at(it.first);
    }
    InPrintHt(ret);
    return ret;
